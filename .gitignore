@@ -1,0 +1,25 @@
+# Ignore the .env file
+.env
+
+# Ignore Go binaries (executables)
+/bin/
+/obj/
+
+# Ignore Go module cache (not needed in the repo)
+/vendor/
+
+# Ignore Go module-related files
+go.sum
+go.mod
+
+# Ignore build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+
+# Ignore temporary or backup files
+*~
+*.swp
