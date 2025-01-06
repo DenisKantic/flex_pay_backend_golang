@@ -26,7 +26,8 @@ func main() {
 
 	r := gin.Default() // Create a new Gin router
 
-	r.POST("/register", auth.Register)
+	r.POST("/register", auth.Register) // register user account
+	r.POST("/login", auth.Login)       // login in user account
 
 	// Start the server on port 8080
 	err = r.Run(":8080")

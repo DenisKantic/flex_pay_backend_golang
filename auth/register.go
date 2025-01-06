@@ -9,22 +9,15 @@ import (
 	"math/rand"
 	"net/smtp"
 	"os"
+	"paypal_clone_project/auth/models"
 	"paypal_clone_project/database"
 	"regexp"
 	"time"
 )
 
-type User struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	CardNum  int    `json:"card_num"`
-	ValidTo  string `json:"valid_to"`
-}
-
 func Register(c *gin.Context) {
 
-	var newUser User
+	var newUser models.User
 	if err := c.ShouldBind(&newUser); err != nil {
 		c.String(400, "An error has occurred")
 		return
