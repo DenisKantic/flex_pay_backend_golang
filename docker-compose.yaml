@@ -1,0 +1,38 @@
+services:
+#  app:
+#    build:
+#      context: .
+#      dockerfile: go.Dockerfile
+#    container_name: golang-app-container
+#    depends_on:
+#        - db  # Golang app depends on the db container being available
+#    ports:
+#        - "8080:8080"  # Expose the Golang application on port 8080
+#    networks:
+#        - app-network
+  # Postgres service
+  db:
+    image: postgres:16
+    container_name: flex-pay
+    environment:
+      POSTGRES_USER: flex
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flexdb
+    ports:
+      - "5434:5432"  # Map container's port 5432 to host's port 5434
+    volumes:
+      - flex-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+
+
+volumes:
+  flex-data:
+    external: true # connecting external volume
+
+networks:
+  app-network:
+    driver: bridge
+
+
