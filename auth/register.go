@@ -20,6 +20,14 @@ func Register(c *gin.Context) {
 	var newUser models.User
 	if err := c.ShouldBind(&newUser); err != nil {
 		c.String(400, "An error has occurred")
+		fmt.Println(err)
+		return
+	}
+
+	available, message := check_email_name_availability(newUser.Email, newUser.Name)
+
+	if !available {
+		c.String(400, message)
 		return
 	}
 
@@ -33,7 +41,7 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	if newUser.CardNum <= 15 {
+	if len(newUser.CardNum) != 16 {
 		c.String(400, "Card number needs to be 16 digits")
 		return
 	}
@@ -59,7 +67,7 @@ func Register(c *gin.Context) {
 	r := rand.New(source)
 
 	activation_code := r.Intn(900000) + 10000
-	fmt.Println("RANDOM NUBMER IS", activation_code)
+	fmt.Println("RANDOM NUMBER IS", activation_code)
 
 	send_activation_code(c, activation_code, newUser.Email) // send activation link to provided email
 
@@ -80,8 +88,8 @@ func Register(c *gin.Context) {
 			return
 		}
 	}(db)
-	c.String(200, "Successfully created user")
 	c.String(200, "Successfully created account")
+	c.String(200, "Activation code is sent to your email!")
 
 }
 
@@ -108,6 +116,39 @@ func check_date(c *gin.Context, valid_to string) bool {
 	}
 
 	return true
+}
+
+func check_email_name_availability(email string, name string) (bool, string) {
+
+	var email_exist, name_exist bool
+	db, err := database.DB_connect()
+
+	if err != nil {
+		log.Fatal(err)
+		return false, "Error has happened."
+	}
+	err = db.QueryRow("SELECT email_exists, name_exists FROM check_existing_account($1,$2)", email, name).Scan(&email_exist, &name_exist)
+
+	if err != nil {
+		fmt.Println(err)
+		return false, "Error for registering verification."
+	}
+
+	if email_exist {
+		return false, "Email already exists"
+	}
+
+	if name_exist {
+		return false, "Name already exists"
+	}
+
+	err = db.Close()
+	if err != nil {
+		fmt.Println(err)
+		return false, "Error has happened."
+	}
+
+	return true, ""
 }
 
 func send_activation_code(c *gin.Context, activation_code int, email string) {
