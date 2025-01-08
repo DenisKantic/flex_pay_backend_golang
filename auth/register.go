@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"math/rand"
 	"net/smtp"
@@ -71,10 +72,22 @@ func Register(c *gin.Context) {
 
 	send_activation_code(c, activation_code, newUser.Email) // send activation link to provided email
 
+	//hashing password before putting into register user function
+
+	hashed_password, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+
+	if err != nil {
+		c.String(400, "Error has happened. Please contact the admin of the page.")
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("hashed password", string(hashed_password))
+
 	var is_profile_activated = true
 
 	_, err = db.Exec("CALL register_user($1,$2,$3,$4,$5,$6,$7)", newUser.Name, newUser.Email,
-		newUser.Password, newUser.CardNum, parsedDate, activation_code, is_profile_activated)
+		hashed_password, newUser.CardNum, parsedDate, activation_code, is_profile_activated)
 
 	if err != nil {
 		c.String(500, "An error has occurred while registering")
