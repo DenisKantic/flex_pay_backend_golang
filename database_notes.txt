@@ -7,8 +7,10 @@ CREATE TABLE users (
     password TEXT NOT NULL,
     card_num TEXT NOT NULL,
     valid_to DATE NOT NULL,
+    balance NUMERIC(10,2) DEFAULT 0.00,
     activation_code INT NOT NULL,
-    is_profile_activated BOOLEAN NOT NULL DEFAULT FALSE
+    is_profile_activated BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 SELECT * FROM users;
 DROP TABLE users;
@@ -30,5 +32,42 @@ AS $$
                 _activation_code, _is_profile_activated);
     END;
 $$;
+
+
+CREATE OR REPLACE FUNCTION check_existing_account(user_email TEXT, user_name TEXT)
+    RETURNS TABLE(email_exists BOOLEAN, name_exists BOOLEAN) AS $$
+BEGIN
+    -- Check if email already exists in the database
+    SELECT EXISTS(SELECT 1 FROM users WHERE email = user_email) INTO email_exists;
+
+    -- Check if name already exists in the database
+    SELECT EXISTS(SELECT 1 FROM users WHERE name = user_name) INTO name_exists;
+
+    -- Return the results using RETURN QUERY
+    RETURN QUERY SELECT email_exists, name_exists;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION get_user_email_and_password(user_email TEXT)
+    RETURNS TEXT AS $$
+DECLARE
+    hashed_password TEXT;
+BEGIN
+    SELECT password INTO hashed_password
+    FROM users
+    WHERE email = user_email;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Email not found';
+    END IF;
+
+    RETURN hashed_password;
+END;
+$$ LANGUAGE plpgsql;
+
+
+DROP FUNCTION get_user_email_and_password(user_email TEXT);
+
 
 
