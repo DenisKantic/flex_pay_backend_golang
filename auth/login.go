@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"fmt"
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -18,15 +18,14 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	email := new_user.Email       //extracting email from struct model
-	password := new_user.Password // extracting password from struct model
+	check_login(c, new_user.Email, new_user.Password) // check auth credentials
 
-	check_login(c, email, password) // check auth credentials
+	return
 
 }
 
 func check_login(c *gin.Context, email string, password string) {
-
+	// Connect to the database
 	db, err := database.DB_connect()
 	if err != nil {
 		log.Println(err)
@@ -34,35 +33,43 @@ func check_login(c *gin.Context, email string, password string) {
 		return
 	}
 
-	var hashed_password string
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
 
-	err = db.QueryRow("SELECT get_hashed_password($1)", email).Scan(&hashed_password)
-	err = bcrypt.CompareHashAndPassword([]byte(hashed_password), []byte(password))
+		}
+	}(db)
+
+	// Query to get email and hashed password from the database
+	var hashedPassword string
+	err = db.QueryRow("SELECT get_user_email_and_password($1)", email).Scan(&hashedPassword)
 	if err != nil {
-		c.String(500, "Password is incorrect.")
-		fmt.Println(err)
+		if err.Error() == "pq: Email not found" {
+			log.Println(err)
+			c.String(401, "Invalid email or password")
+			return
+		}
+		log.Println("Database query error:", err)
+		c.String(500, "Internal server error")
 		return
 	}
-	var exists bool
-	err = db.QueryRow("SELECT check_email_and_password($1, $2)", email, hashed_password).Scan(&exists)
+
+	// Compare the provided password with the stored hashed password
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		c.String(500, "Error happened")
-		fmt.Println(err)
+		// Passwords don't match
+		c.String(401, "Incorrect password")
+		log.Fatal(err)
 		return
 	}
 
-	// return the results
-	if exists {
-		c.String(200, "Login successful")
-		return
-	} else {
-		c.String(404, "Wrong credentials. Try again")
-	}
+	// Successful login
+	c.String(200, "Login successful")
 
-	err = db.Close()
-	if err != nil {
-		return
-	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
 
-	return
+		}
+	}(db)
 }
