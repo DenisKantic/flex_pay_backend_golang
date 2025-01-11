@@ -159,3 +159,10 @@ func VerifyJWT(c *gin.Context) {
 	c.Set("email", claims.Email)
 	c.Next()
 }
+
+func Logout(c *gin.Context) {
+	// clearing jwt cookie by setting it to an expired date
+	c.SetCookie("jwt", "", -1, "/", "localhost", false, true)
+
+	c.String(200, "Logout Succesfull")
+}
