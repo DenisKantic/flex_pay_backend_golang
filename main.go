@@ -22,6 +22,7 @@ func main() {
 	r.POST("/login", auth.Login)
 	r.GET("/logout", auth.Logout)
 	r.GET("/token-verify", auth.VerifyJWT)
+	r.GET("/balance", auth.VerifyJWT, auth.GetBalance)
 	r.GET("/protected", auth.VerifyJWT, func(c *gin.Context) {
 		email, _ := c.Get("email")
 		c.JSON(200, gin.H{
