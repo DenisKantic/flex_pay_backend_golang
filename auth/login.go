@@ -29,7 +29,7 @@ func Login(c *gin.Context) {
 	}
 
 	check_login(c, new_user.Email, new_user.Password) // check auth credentials
-
+	VerifyJWT(c)
 	return
 
 }
@@ -80,7 +80,7 @@ func check_login(c *gin.Context, email string, password string) {
 		return
 	}
 
-	c.SetCookie("jwt", token, 3600, "/", "localhost", false, true)
+	c.SetCookie("jwt", token, 3600, "/", "localhost", false, false)
 
 	// return success response
 	c.JSON(200, gin.H{
@@ -157,7 +157,7 @@ func VerifyJWT(c *gin.Context) {
 
 	// You can now access the email from the claims
 	c.Set("email", claims.Email)
-	c.Next()
+	c.String(200, "token valid")
 }
 
 func Logout(c *gin.Context) {
