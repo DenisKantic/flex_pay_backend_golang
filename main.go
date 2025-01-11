@@ -13,14 +13,14 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:4200"},
-		AllowMethods:     []string{"GET", "POST", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 
 	r.POST("/register", auth.Register)
 	r.POST("/login", auth.Login)
+	r.GET("/logout", auth.Logout)
 	r.GET("/protected", auth.VerifyJWT, func(c *gin.Context) {
 		email, _ := c.Get("email")
 		c.JSON(200, gin.H{
