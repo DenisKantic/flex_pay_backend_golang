@@ -7,7 +7,6 @@ import (
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"log"
-	"math/rand"
 	"net/smtp"
 	"os"
 	"paypal_clone_project/auth/models"
@@ -63,16 +62,16 @@ func Register(c *gin.Context) {
 		log.Fatal("Error parsing date:", err)
 	}
 
-	// create a new random number generator with a custom seed value
-	source := rand.NewSource(time.Now().UnixNano()) // using current unix timestamp as seed
-	r := rand.New(source)
-
-	activation_code := r.Intn(900000) + 10000
-	fmt.Println("RANDOM NUMBER IS", activation_code)
-
-	send_activation_code(c, activation_code, newUser.Email) // send activation link to provided email
-
-	//hashing password before putting into register user function
+	//// create a new random number generator with a custom seed value
+	//source := rand.NewSource(time.Now().UnixNano()) // using current unix timestamp as seed
+	//r := rand.New(source)
+	//
+	//activation_code := r.Intn(900000) + 10000
+	//fmt.Println("RANDOM NUMBER IS", activation_code)
+	//
+	//send_activation_code(c, activation_code, newUser.Email) // send activation link to provided email
+	//
+	////hashing password before putting into register user function
 
 	hashed_password, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 
@@ -86,8 +85,8 @@ func Register(c *gin.Context) {
 
 	var is_profile_activated = true
 
-	_, err = db.Exec("CALL register_user($1,$2,$3,$4,$5,$6,$7)", newUser.Name, newUser.Email,
-		hashed_password, newUser.CardNum, parsedDate, activation_code, is_profile_activated)
+	_, err = db.Exec("CALL register_user($1,$2,$3,$4,$5,$6)", newUser.Name, newUser.Email,
+		hashed_password, newUser.CardNum, parsedDate, is_profile_activated)
 
 	if err != nil {
 		c.String(500, "An error has occurred while registering")
@@ -101,8 +100,9 @@ func Register(c *gin.Context) {
 			return
 		}
 	}(db)
+
+	send_activation_code(newUser.Email)
 	c.String(200, "Successfully created account")
-	c.String(200, "Activation code is sent to your email!")
 
 }
 
@@ -115,6 +115,8 @@ func is_valid_email(email string) bool {
 func check_date(c *gin.Context, valid_to string) bool {
 	today := time.Now()
 
+	fmt.Println("DATE I GOT", valid_to)
+
 	fmt.Print("TODAYS DATE", today)
 	parsed_date, err := time.Parse("02-01-2006", valid_to)
 
@@ -126,6 +128,7 @@ func check_date(c *gin.Context, valid_to string) bool {
 
 	if today.After(parsed_date) {
 		c.String(400, "You can't choose the older date")
+		return false
 	}
 
 	return true
@@ -164,7 +167,7 @@ func check_email_name_availability(email string, name string) (bool, string) {
 	return true, ""
 }
 
-func send_activation_code(c *gin.Context, activation_code int, email string) {
+func send_activation_code(email string) {
 
 	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error loading .env file")
@@ -183,10 +186,9 @@ func send_activation_code(c *gin.Context, activation_code int, email string) {
 	to := []string{email}
 
 	// define email message
-	subject := "Subject: FlexPay activation code"
-	body := fmt.Sprintf("Welcome to our FlexPay and thank you for choosing us! \n"+
-		"Below you will find your activation code to confirm your account \n"+
-		"Activation code: %d", activation_code)
+	subject := "Thank you for choosing our services"
+	body := fmt.Sprintf("Welcome to our FlexPay and thank you for choosing us! \n" +
+		"\nFlexPay: Simple and easiest way to send and receive money. \n")
 
 	// construct the email
 	message := []byte(fmt.Sprintf("To: %s\r\nFrom: %s\r\nSubject: %s\r\n\r\n%s", to[0], from, subject, body))
