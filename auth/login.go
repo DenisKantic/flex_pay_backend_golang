@@ -203,6 +203,57 @@ func GetBalance(c *gin.Context) {
 	c.JSON(200, gin.H{"balance": balance})
 }
 
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email"` // New email to change to
+}
+
 func ChangeEmail(c *gin.Context) {
 
+	var request ChangeEmailRequest
+
+	// Bind the JSON payload to the request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	// Retrieve the email from the JWT token
+	tokenString, err := c.Cookie("jwt")
+	if err != nil {
+		log.Println("Error obtaining cookie:", err)
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwt_key, nil // Replace with your secret key
+	})
+
+	if err != nil || !token.Valid {
+		log.Println("Invalid Token:", err)
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	currentEmail := claims.Email // Extract the current email from claims
+
+	// Connect to the database
+	db, err := database.DB_connect()
+	if err != nil {
+		log.Println("Database connection error:", err)
+		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
+	}
+	defer db.Close() // Ensure the database connection is closed
+
+	// Call the stored procedure to update email
+	_, err = db.Exec("SELECT * FROM update_user_email($1, $2)", currentEmail, request.NewEmail)
+	if err != nil {
+		log.Println("Error updating email:", err)
+		c.JSON(500, gin.H{"error": "Failed to change email"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Email updated successfully"})
 }
