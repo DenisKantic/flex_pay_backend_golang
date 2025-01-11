@@ -13,7 +13,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:4200"},
-		AllowMethods:     []string{"GET", "POST", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
@@ -21,6 +21,7 @@ func main() {
 	r.POST("/register", auth.Register)
 	r.POST("/login", auth.Login)
 	r.GET("/logout", auth.Logout)
+	r.GET("/token-verify", auth.VerifyJWT)
 	r.GET("/protected", auth.VerifyJWT, func(c *gin.Context) {
 		email, _ := c.Get("email")
 		c.JSON(200, gin.H{
