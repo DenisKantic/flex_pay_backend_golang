@@ -169,7 +169,7 @@ func Logout(c *gin.Context) {
 
 // other GET functions
 
-func GetBalance(c *gin.Context) {
+func GetUserInfo(c *gin.Context) {
 	// Retrieve the email from the context set in VerifyJWT
 	email, exists := c.Get("email")
 	if !exists {
@@ -192,15 +192,24 @@ func GetBalance(c *gin.Context) {
 	}
 	defer db.Close() // Ensure you close the DB connection
 
-	var balance float64
-	err = db.QueryRow("SELECT get_user_balance($1)", userEmail).Scan(&balance)
+	var userBalance float64
+	var userCard int64
+	var userName string
+	var validTo string
+	err = db.QueryRow("SELECT * FROM get_user_details($1)", userEmail).Scan(&userBalance, &userCard, &userName, &userEmail, &validTo)
 	if err != nil {
 		log.Println("Error retrieving balance:", err)
-		c.String(500, "Error retrieving balance")
+		c.String(500, "Error retrieving user info")
 		return
 	}
 
-	c.JSON(200, gin.H{"balance": balance})
+	c.JSON(200, gin.H{
+		"balance":  userBalance,
+		"card":     userCard,
+		"email":    userEmail,
+		"username": userName,
+		"valid_to": validTo,
+	})
 }
 
 type ChangeEmailRequest struct {
