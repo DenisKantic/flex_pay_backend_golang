@@ -266,3 +266,36 @@ func ChangeEmail(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Email updated successfully"})
 }
+
+type TransferFundsRequest struct {
+	UserEmail string  `json:"user_email" binding:"required,email"` // User's email (must be valid)
+	Amount    float64 `json:"amount" binding:"required,min=0"`     // Amount to transfer (must be positive)
+}
+
+func TransferFunds(c *gin.Context) {
+	var request TransferFundsRequest
+
+	// Bind the JSON payload to the request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	db, err := database.DB_connect()
+	if err != nil {
+		log.Println("Database connection error:", err)
+		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
+	}
+	defer db.Close()
+
+	// Call the stored procedure to transfer funds
+	_, err = db.Exec("SELECT transfer_funds($1, $2)", request.UserEmail, request.Amount)
+	if err != nil {
+		log.Println("Error transferring funds:", err)
+		c.JSON(500, gin.H{"error": "Failed to transfer funds"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Transfer successful"})
+}
