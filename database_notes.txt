@@ -1,19 +1,14 @@
-SELECT datname FROM pg_database;
-
 CREATE TABLE users (
     ID SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
     password TEXT NOT NULL,
     card_num TEXT NOT NULL,
     valid_to DATE NOT NULL,
-    balance NUMERIC(10,2) DEFAULT 0.00,
-    activation_code INT NOT NULL,
+    balance NUMERIC(10,2) DEFAULT 100.00,
     is_profile_activated BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );
-SELECT * FROM users;
-DROP TABLE users;
 
 CREATE OR REPLACE PROCEDURE register_user(
     _name VARCHAR,
@@ -21,15 +16,14 @@ CREATE OR REPLACE PROCEDURE register_user(
     _password VARCHAR,
     _card_num TEXT,
     _valid_to DATE,
-    _activation_code INT,
     _is_profile_activated BOOLEAN
 )
 LANGUAGE plpgsql
 AS $$
     BEGIN
-        INSERT INTO users (name,email,password,card_num,valid_to, activation_code, is_profile_activated)
+        INSERT INTO users (name,email,password,card_num,valid_to, is_profile_activated)
         VALUES (_name,_email,_password, _card_num, _valid_to,
-                _activation_code, _is_profile_activated);
+                 _is_profile_activated);
     END;
 $$;
 
@@ -67,7 +61,64 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-DROP FUNCTION get_user_email_and_password(user_email TEXT);
+CREATE OR REPLACE FUNCTION get_user_details(user_email TEXT)
+    RETURNS TABLE(user_balance NUMERIC, card TEXT, user_name VARCHAR(100), email_user VARCHAR(150), valid_card DATE) AS $$
+BEGIN
+    RETURN QUERY
+        SELECT balance, card_num, name, email, valid_to
+        FROM users
+        WHERE email = user_email;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP FUNCTION get_user_details(user_email TEXT);
+
+
+
+CREATE OR REPLACE FUNCTION update_user_email(current_email VARCHAR(150), new_email VARCHAR(150))
+    RETURNS VOID AS $$
+BEGIN
+    UPDATE users
+    SET email = new_email
+    WHERE email = current_email;
+
+    -- Optionally, check if any rows were updated and raise an exception if not
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No user found with the current email %', current_email;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION transfer_funds(user_email TEXT, amount NUMERIC)
+    RETURNS VOID AS $$
+DECLARE
+    current_balance NUMERIC;
+BEGIN
+    -- Get the current balance for the user
+    SELECT balance INTO current_balance
+    FROM users
+    WHERE email = user_email;
+
+    -- Check if the user exists and retrieve the balance
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'User with email % not found', user_email;
+    END IF;
+
+    -- Check if sufficient funds are available to withdraw
+    IF current_balance < amount THEN
+        RAISE EXCEPTION 'Insufficient funds for withdrawal of %', amount;
+    END IF;
+
+    -- Update the balance by deducting the amount
+    UPDATE users
+    SET balance = balance - amount
+    WHERE email = user_email;
+
+    RAISE NOTICE 'Successfully transferred % from account. New balance: %',
+        amount, current_balance - amount;
+END;
+$$ LANGUAGE plpgsql;
 
 
 
