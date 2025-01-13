@@ -169,7 +169,7 @@ func Logout(c *gin.Context) {
 
 // other GET functions
 
-func GetBalance(c *gin.Context) {
+func GetUserInfo(c *gin.Context) {
 	// Retrieve the email from the context set in VerifyJWT
 	email, exists := c.Get("email")
 	if !exists {
@@ -192,15 +192,24 @@ func GetBalance(c *gin.Context) {
 	}
 	defer db.Close() // Ensure you close the DB connection
 
-	var balance float64
-	err = db.QueryRow("SELECT get_user_balance($1)", userEmail).Scan(&balance)
+	var userBalance float64
+	var userCard int64
+	var userName string
+	var validTo string
+	err = db.QueryRow("SELECT * FROM get_user_details($1)", userEmail).Scan(&userBalance, &userCard, &userName, &userEmail, &validTo)
 	if err != nil {
 		log.Println("Error retrieving balance:", err)
-		c.String(500, "Error retrieving balance")
+		c.String(500, "Error retrieving user info")
 		return
 	}
 
-	c.JSON(200, gin.H{"balance": balance})
+	c.JSON(200, gin.H{
+		"balance":  userBalance,
+		"card":     userCard,
+		"email":    userEmail,
+		"username": userName,
+		"valid_to": validTo,
+	})
 }
 
 type ChangeEmailRequest struct {
@@ -256,4 +265,37 @@ func ChangeEmail(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"message": "Email updated successfully"})
+}
+
+type TransferFundsRequest struct {
+	UserEmail string  `json:"user_email" binding:"required,email"` // User's email (must be valid)
+	Amount    float64 `json:"amount" binding:"required,min=0"`     // Amount to transfer (must be positive)
+}
+
+func TransferFunds(c *gin.Context) {
+	var request TransferFundsRequest
+
+	// Bind the JSON payload to the request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	db, err := database.DB_connect()
+	if err != nil {
+		log.Println("Database connection error:", err)
+		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
+	}
+	defer db.Close()
+
+	// Call the stored procedure to transfer funds
+	_, err = db.Exec("SELECT transfer_funds($1, $2)", request.UserEmail, request.Amount)
+	if err != nil {
+		log.Println("Error transferring funds:", err)
+		c.JSON(500, gin.H{"error": "Failed to transfer funds"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Transfer successful"})
 }

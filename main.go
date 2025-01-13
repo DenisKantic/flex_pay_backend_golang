@@ -21,9 +21,10 @@ func main() {
 	r.POST("/register", auth.Register)
 	r.POST("/login", auth.Login)
 	r.POST("/change-email", auth.ChangeEmail)
+	r.POST("/transfer-funds", auth.TransferFunds)
 	r.GET("/logout", auth.Logout)
 	r.GET("/token-verify", auth.VerifyJWT)
-	r.GET("/balance", auth.VerifyJWT, auth.GetBalance)
+	r.GET("/user-info", auth.VerifyJWT, auth.GetUserInfo)
 	r.GET("/protected", auth.VerifyJWT, func(c *gin.Context) {
 		email, _ := c.Get("email")
 		c.JSON(200, gin.H{
