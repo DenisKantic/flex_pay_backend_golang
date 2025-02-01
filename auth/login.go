@@ -24,12 +24,11 @@ func Login(c *gin.Context) {
 	var new_user models.User
 
 	if err := c.ShouldBind(&new_user); err != nil {
-		c.String(400, "An error has occurred")
+		c.JSON(400, gin.H{"error": "An error has occurred"})
 		return
 	}
 
 	check_login(c, new_user.Email, new_user.Password) // check auth credentials
-	VerifyJWT(c)
 	return
 
 }

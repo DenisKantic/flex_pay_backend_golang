@@ -102,7 +102,7 @@ func Register(c *gin.Context) {
 	}(db)
 
 	send_activation_code(newUser.Email)
-	c.String(200, "Successfully created account")
+	c.JSON(200, gin.H{"success": "Successfully created account"})
 
 }
 
